@@ -105,30 +105,6 @@ def preprocessEucledian(path, id_map):
     #print(time.time() - x)
     return data_image, mask
 
-def preprocess(path, id_map):
-    x = time.time()
-    img = img_to_array(load_img(path, target_size=(256, 512)))
-    data_image = img[:, :256, :] / 255.0
-    data_mask = img[:, 256:, :]
-    num_classes = len(id_map)
-    # Convert the mask to categorical format
-    mask = np.zeros((*data_mask.shape[:2], num_classes), dtype=np.uint8)
-    #temp = np.zeros((31,1))
-
-            
-    for k in range(0,255):
-        for l in range(0,255):
-            temp = np.zeros((31,1))
-            for i, info in id_map.items():
-                r, g, b = info[1], info[2], info[3]   
-                temp[i] = np.sum(np.abs(data_mask[k][l] - np.array([r, g, b])))
-            mask[k][l][np.argmin(temp)] = 1
-                     # if data_mask[k][l][0] == r and data_mask[k][l][1] == g and data_mask[k][l][2] == b:
-                         # mask[k][l][i] = 1        
-            #mask[np.where(np.all(data_mask == (r, g, b), axis=-1))] = to_categorical(i, num_classes=num_classes)
-
-    print(time.time()-x)
-    return data_image, mask
 
 def prepare_tensor_dataset(train_path, val_path, id_map):
     X_train = []
