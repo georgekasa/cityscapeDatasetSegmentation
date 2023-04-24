@@ -15,6 +15,14 @@ in the masks they are many many pixels which their values could be e.g. (0,0,2) 
 4) Also I used the Unet, algorithm without using some tricks which Karpathy has suggested from CS231N, the code for the NN I did get it from the course which I finished in coursera AdvancedComputer vision with tf & keras
     https://github.com/georgekasa/courseraAdvancedComputerVisionTensorFlow- 
     
-    
+ 
+######################### v2 #########################
+1 is on the way
+updated 2 with tf.keras.utils.image_dataset_from_directory
+updated 3 used tensors 
+ 
+ 
+ 
+ 
 [1]https://github.com/mcordts/cityscapesScripts
 [2]https://github.com/mcordts/cityscapesScripts/blob/master/cityscapesscripts/helpers/labels.py
