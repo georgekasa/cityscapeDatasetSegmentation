@@ -64,23 +64,7 @@ def decalreIdmap():
 
 from tensorflow.keras.utils import load_img, img_to_array
 
-# def preprocess(path):
-#    # img = Image.open(path)
-#     ###################################
-#     ###################################
-#     #gfet shape of the image Either None (default to original size) or tuple of ints (img_height, img_width).!!!
-#     img = img_to_array(load_img(path, target_size=(256, 512)))
-#     data_image = img[:, :256, :]/255.0
-#     data_mask = img[:, 256:, :]
-#     #data_image = tf.cast(data_image, tf.float32)
-#    # data_mask = tf.cast(data_mask, tf.int32)
-#     #plt.imshow(data_image.numpy().astype("uint8"))
-#     return data_image, data_mask
-#plt.imshow((255*mask[:,:,-1]).astype("uint8"))
-#plt.imshow((data_image*255).astype("uint8"), alpha=0.5)
 
-#Y_train_one_hot = to_categorical(Y_train, num_classes)
-#Y_valid_one_hot = to_categorical(Y_valid, num_classes)
 
 import cupy #/10 the time with cupy 
 def preprocessEucledian(path, id_map):
