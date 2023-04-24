@@ -17,6 +17,8 @@ in the masks they are many many pixels which their values could be e.g. (0,0,2) 
     
  
 ######################### v2 #########################
+
+
 1 is on the way
 updated 2 with tf.keras.utils.image_dataset_from_directory
 updated 3 used tensors 
