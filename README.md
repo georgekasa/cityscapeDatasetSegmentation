@@ -13,7 +13,7 @@ there are 31 classes and are writen in this format:
     etc.
 in the masks they are many many pixels which their values could (0,0,2) so I used the Euclidean distance from the cupy library to find the smaller distance to match this pixel to the correct label (e.g. here in an unlabeled), this task was extremely computationally, because the dataset has 3k masks with dim 256x256x3 so = 589_824_000 pixels I did the Euclidean distance with NVIDIA cupy which sped the process comparing to the numpy by /10!!(for each picture manipulation, will try also to use cuda -python, the v1 is just a naive)
 4) Also I used the Unet, algorithm without using some tricks which Karpathy has suggested from CS231N
-    
+    https://github.com/georgekasa/courseraAdvancedComputerVisionTensorFlow- 
     
     
 [1]https://github.com/mcordts/cityscapesScripts
