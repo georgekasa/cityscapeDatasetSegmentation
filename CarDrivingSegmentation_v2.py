@@ -171,7 +171,7 @@ seed_number = 123
 pathData = "/media/gkasap/ssd256gb/datasets/cityscapes_data"
 train_ds = tf.keras.utils.image_dataset_from_directory(
   pathData+"/trainDir",
-  validation_split=0.2,
+  validation_split=0.1,
   subset="training",
   seed=seed_number,
   image_size=(H, W*2),
@@ -179,7 +179,7 @@ train_ds = tf.keras.utils.image_dataset_from_directory(
 
 val_ds = tf.keras.utils.image_dataset_from_directory(
   pathData+"/valDir",
-  validation_split=0.2,
+  validation_split=0.9,
   subset="validation",
   seed=seed_number,
   image_size=(H, W*2),
