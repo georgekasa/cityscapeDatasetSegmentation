@@ -370,7 +370,8 @@ model.compile(optimizer=Adam(lr=1e-3), loss='sparse_categorical_crossentropy', m
 
 #not finished
 history = model.fit(
-    training_dataset, 
+    training_dataset,
+    batch_size= batch_size,
     epochs=EPOCHS, 
     verbose=1, shuffle=True,
     validation_data=validation_dataset
