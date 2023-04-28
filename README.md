@@ -29,4 +29,5 @@ updated 3 used tensors
 [1]https://github.com/mcordts/cityscapesScripts
 [2]https://github.com/mcordts/cityscapesScripts/blob/master/cityscapesscripts/helpers/labels.py
 
-(i dont why the format is broken in edit is okay)
+10 epochs only train (v3)
+![dummy](https://user-images.githubusercontent.com/79354220/235147584-b233fbf8-b2e8-45a9-bd8a-8498f22513c8.png)
