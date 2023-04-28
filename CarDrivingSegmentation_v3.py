@@ -472,40 +472,28 @@ def dice_coef_NVIDIA(y_true, y_pred, smooth=1):
 
     return dice
 
-def dice_coef_NVIDIA_multiClass(y_true, y_pred, num_classes = 31, smooth=1):
-    #y_true = K.flatten(y_true)
-    #y_true = K.expand_dims(y_true, axis=-1)
+def dice_coef_NVIDIA_multiClass(y_true, y_pred, num_classes = 31, smooth=1.0):
     #print(y_true.shape)
     #print(y_pred.shape)#None 256x256x31
     y_true = K.cast(y_true, dtype='int32') #None 256x256
     y_pred = K.argmax(y_pred, axis=-1)#None 256x256
-    #print(y_true.shape)
-    #print(y_pred.shape)
     y_true = K.cast(K.one_hot(y_true, num_classes), "int32")#None 256x256x31
     y_pred = K.cast(K.one_hot(y_pred, num_classes), "int32")#None 256x256x31
 
-    #y_pred = K.reshape(y_pred, [-1, 256, 256, num_classes])
     #y_pred = K.flatten(y_pred)
-    axis = [1, 2, 3]
+    axis = [1, 2]
     intersection = K.cast(K.sum(y_true * y_pred, axis = axis), "float32")
-    print(intersection.shape)
-    union = K.cast(K.sum(y_true + y_pred, axis = axis), "float32")
-    print(union.shape)
-    dice = K.mean((2. * intersection + smooth) / (union + smooth),axis = 0)
-    # print(dice)
-    # print(dice.dtype)
+    #print(intersection.shape)
+    print(intersection)
+    #union = K.cast(K.sum(y_true + y_pred, axis = axis), "float32")
+    y_true = K.cast(y_true, dtype='float32')
+    y_pred = K.cast(y_pred, dtype='float32')
+    union = K.sum(y_true, axis=axis) + K.sum(y_pred, axis=axis)
+    #print(type(smooth))
+    dice = K.mean((2. * intersection + smooth) / (union + smooth))#axis = 0)
+    print(union)
     return dice
-
-def dice_coef_9cat(y_true, y_pred, smooth=1e-7):
-    '''
-    Dice coefficient for 10 categories. Ignores background pixel label 0
-    Pass to model as metric during compile statement
-    '''
-    y_true_f = K.flatten(K.one_hot(K.cast(y_true, 'int32'), num_classes=10)[...,1:])
-    y_pred_f = K.flatten(y_pred[...,1:])
-    intersect = K.sum(y_true_f * y_pred_f, axis=-1)
-    denom = K.sum(y_true_f + y_pred_f, axis=-1)
-    return K.mean((2. * intersect / (denom + smooth)))
+#2 kai 13, 0.9838
 
 #expand_dims
 #IoU = TP / (TP + FP + FN)
@@ -543,7 +531,7 @@ def mean_iou(y_true, y_pred):
 
 
 
-EPOCHS = 30
+EPOCHS = 10
 model.compile(optimizer=Adam(lr=1e-3), loss='sparse_categorical_crossentropy',
                metrics=[dice_coef_NVIDIA_multiClass, 'accuracy'])
 # #print(model.summary())
@@ -563,25 +551,3 @@ history = model.fit(
     validation_steps=validation_steps
 )
 model.save(NameoftheSimulation+'.h5')
-
-#Y_pred = model.predict(X_valid)
-
-# print some example predictions
-
-
-##################################
-### test bench for custom metrics
-##################################
-# smooth=1.0
-# for x,y_true in training_dataset.take(1).repeat():
-#     for x,y_pred in validation_dataset.take(1).repeat():       
-#         y_true_f = K.flatten(y_true)
-#         y_pred_f = K.flatten(y_pred)
-#         y_true_f = K.cast(y_true_f, dtype='float32')
-#         y_pred_f = K.cast(y_pred_f, dtype='float32')
-#         intersection = K.sum(y_true_f * y_pred_f)
-#         dice = (2. * intersection + smooth) / (K.sum(y_true_f) + K.sum(y_pred_f) + smooth)
-#         print(dice)
-       
-#         break
-#     break
