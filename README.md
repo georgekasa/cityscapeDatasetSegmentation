@@ -16,12 +16,11 @@ in the masks they are many many pixels which their values could be e.g. (0,0,2) 
     https://github.com/georgekasa/courseraAdvancedComputerVisionTensorFlow- 
     
  
-######################### v2 #########################
+#update 20230430
 
+1) added (simple) augmentation
+2) weights in classes
 
-1 is on the way
-updated 2 with tf.keras.utils.image_dataset_from_directory
-updated 3 used tensors 
  
  
  
