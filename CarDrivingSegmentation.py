@@ -606,7 +606,7 @@ def dice_loss(y_true, y_pred):
 EPOCHS = 25
 OPTIMIZER = SGD(lr=0.01, momentum=0.9, decay=0.0005, nesterov=True)
 model.compile(optimizer=OPTIMIZER, loss=tf.keras.losses.SparseCategoricalCrossentropy(),
-              metrics=[mean_iou, dice_coef_NVIDIA_multiClass, 'accuracy'])
+              metrics=[dice_coef_NVIDIA_multiClass, mean_iou, 'accuracy'])
 
    # sample_weight_mode="temporal"
 
