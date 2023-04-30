@@ -28,6 +28,10 @@ in the masks they are many many pixels which their values could be e.g. (0,0,2) 
 [1]https://github.com/mcordts/cityscapesScripts
 [2]https://github.com/mcordts/cityscapesScripts/blob/master/cityscapesscripts/helpers/labels.py
 
-25 epochs only train (v3)
+25 epochs train 
 ![dummy](https://user-images.githubusercontent.com/79354220/235147584-b233fbf8-b2e8-45a9-bd8a-8498f22513c8.png)
 ![Screenshot from 2023-04-30 17-53-19](https://user-images.githubusercontent.com/79354220/235359766-86bad685-bb69-489b-b58e-38373b4ee0c7.png)
+possible solutions
+1)alter relu to leaky relu
+2)more options for augmentation
+3) custom dice loss?
