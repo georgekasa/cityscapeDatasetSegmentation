@@ -14,7 +14,7 @@ from keras.layers import *
 from keras.optimizers import *
 from keras.callbacks import ModelCheckpoint
 from tensorflow import keras
-
+from tensorflow.keras import backend as K
 
 
 def decalreIdmap():
@@ -33,23 +33,22 @@ def decalreIdmap():
         11: ("bridge", 150, 100, 100),
         12: ("tunnel", 150, 120, 90),
         13: ("pole", 153, 153, 153),
-        14: ("polegroup", 153, 153, 153),
-        15: ("traffic light", 250, 170, 30),
-        16: ("traffic sign", 220, 220, 0),
-        17: ("vegetation", 107, 142, 35),
-        18: ("terrain", 152, 251, 152),
-        19: ("sky", 70, 130, 180),
-        20: ("person", 220, 20, 60),
-        21: ("rider", 255, 0, 0),
-        22: ("car", 0, 0, 142),
-        23: ("truck", 0, 0, 70),
-        24: ("bus", 0, 60, 100),
-        25: ("caravan", 0, 0, 90),
-        26: ("trailer", 0, 0, 110),
-        27: ("train", 0, 80, 100),
-        28: ("motorcycle", 0, 0, 230),
-        29: ("bicycle", 119, 11, 32),
-        30: ("license plate", 0, 0, 142)
+        14: ("traffic light", 250, 170, 30),
+        15: ("traffic sign", 220, 220, 0),
+        16: ("vegetation", 107, 142, 35),
+        17: ("terrain", 152, 251, 152),
+        18: ("sky", 70, 130, 180),
+        19: ("person", 220, 20, 60),
+        20: ("rider", 255, 0, 0),
+        21: ("car", 0, 0, 142),
+        22: ("truck", 0, 0, 70),
+        23: ("bus", 0, 60, 100),
+        24: ("caravan", 0, 0, 90),
+        25: ("trailer", 0, 0, 110),
+        26: ("train", 0, 80, 100),
+        27: ("motorcycle", 0, 0, 230),
+        28: ("bicycle", 119, 11, 32),
+       # 30: ("license plate", 0, 0, 142)
     }
     df = pd.DataFrame.from_dict(id_map, orient='index', columns=["className",'r', 'g', 'b'])
     #df.index.name = 'name'
@@ -58,121 +57,235 @@ def decalreIdmap():
     print(df)
     return id_map
 
+#inferno, plasma, magma, viridis
+def printImages(dataset, index_of_dataset , numberofImages):
+  x = dataset.take(index_of_dataset)
+  for image, labels, labels_truth in x:
+      fig, axs = plt.subplots(numberofImages, 3, figsize=(16, 16))
+      for i in range(numberofImages):
+          # Convert the tensor to a NumPy array
+          image_array = (255*image[i]).numpy().astype("uint8")
+          labels_array = labels[i].numpy().astype("uint8")
+          labels_truth_array = labels_truth[i].numpy().astype("uint8")
+          axs[i, 0].imshow(image_array)
+          axs[i, 0].axis("off")
+          axs[i, 0].set_title("Image {}".format(i))
+          axs[i, 1].imshow(labels_array, cmap="viridis")
+          axs[i, 1].axis("off")
+          axs[i, 1].set_title("mask generated {}".format(i))
+          axs[i, 2].imshow(labels_truth_array, cmap="plasma")
+          axs[i, 2].axis("off")
+          axs[i, 2].set_title("mask truth {}".format(i))
 
-#num_classes = len(id_map.keys())
-#https://github.com/mcordts/cityscapesScripts/blob/master/cityscapesscripts/helpers/labels.py labels!!!
+
+      plt.show()
+      break
+
+
+
+
+
+
+def printImages2(dataset, index_of_dataset , numberofImages):
+  x = dataset.take(index_of_dataset)
+  for image, labels in x:
+      fig, axs = plt.subplots(numberofImages, 2, figsize=(16, 16))
+      print(labels.shape)
+      for i in range(numberofImages):
+          # Convert the tensor to a NumPy array
+          image_array = (255*image[i]).numpy().astype("uint8")
+          labels_array = labels[i].numpy().astype("uint8")
+          axs[i, 0].imshow(image_array)
+          axs[i, 0].axis("off")
+          axs[i, 0].set_title("Image {}".format(i))
+          axs[i, 1].imshow(labels_array, cmap="viridis")
+          axs[i, 1].axis("off")
+          axs[i, 1].set_title("mask generated {}".format(i))
+
+
+      plt.show()
+      break
+
+
+def add_sample_weights(image, label):
+  # The weights for each class, with the constraint that:
+  #     sum(class_weights) == 1.0
+  class_weights = tf.constant([8.07258824e-02, 3.94096823e-03, 1.60259805e-02, 3.25466704e-01,
+                        5.19174835e-02, 5.75354825e-03, 2.30739049e-03, 2.04011979e-01,
+                        1.13496719e-02, 8.01914760e-03, 1.96446523e-03, 5.54203835e-03,
+                        7.24404215e-03, 6.50931735e-03, 1.60708131e-03, 3.80645496e-03,
+                        1.35854395e-01, 9.24071240e-03, 3.18496678e-02, 9.98223826e-03,
+                        6.80947184e-04, 5.26883114e-02, 4.68826422e-03, 2.85823021e-03,
+                        2.04948361e-03, 6.29398122e-03, 2.02723912e-03, 6.61323611e-04,
+                        4.93305110e-03])
+  #class_weights = class_weights/tf.reduce_sum(class_weights)
+
+  # Create an image of `sample_weights` by using the label at each pixel as an 
+  # index into the `class weights` .
+  sample_weights = tf.gather(class_weights, indices=tf.cast(label, tf.int32))
+
+  return image, label, sample_weights
+
+
+
+def set_numeric_values(numeric_values, id_map):
+  for _, info in id_map.items():
+    # Extract the numeric values from the tuple and append them to the list
+      numeric_values.extend(info[1:])
+
+  # Convert the list to a NumPy array this can be done in one line
+  numeric_values = np.array(numeric_values)
+  
+
+
+def get_numeric_array():
+  return numeric_values
+
+def preprocessEucledian(theImage, id_map):
+    #x = time.time()
+    #img = img_to_array(load_img(path, target_size=(256, 512)))#numpy returns
+    image = tf.cast(theImage, dtype=tf.float32)
+    data_image = image[:,:, :256, :] / 255.0
+    data_mask = image[:,:, 256:, :]
+    data_mask = tf.cast(data_mask, dtype=tf.float32)
+    data_mask_truth = data_mask
+    numeric_values = get_numeric_array()
+    class_rgb = tf.zeros((len(id_map), 3), dtype=tf.float32)#it may want 32,(31,3)
+    class_rgb = numeric_values + class_rgb
+    data_mask = tf.expand_dims(data_mask, axis=3)
+    # Convert the mask to categorical format
+    #mask = tf.zeros((*data_mask.shape[:2+1], num_classes), dtype=tf.int32)
+    mask = tf.linalg.norm(data_mask - class_rgb, axis=-1)
+    
+    mask = tf.argmin(mask, axis = -1)
+    mask = tf.expand_dims(mask, axis=-1) 
+    #print(time.time() - x)
+    return data_image, tf.cast(mask, tf.int32), data_mask_truth
+
+
+#tf.keras.layers.experimental.preprocessing.RandomContrast(factor=0.2, seed=seed)
+def Augment(images, labels):
+  data_augmentation = tf.keras.layers.RandomFlip(mode="horizontal", seed=69)
+  data_augmentation_mask = tf.keras.layers.RandomFlip(mode="horizontal", seed=69)
+  #labels = tf.expand_dims(labels, axis=3)
+  return data_augmentation(images), data_augmentation_mask(labels)
+
+
+def read_image_and_annotation(big_image, masks, training=False):
+  '''
+  Casts the image and annotation to their expected data type and
+  normalizes the input image so that each pixel is in the range [-1, 1]
+
+  Args:
+    image (numpy array) -- input image
+    annotation (numpy array) -- ground truth label map
+
+  Returns:
+    preprocessed image-annotation pair
+  '''
+  #print("hello")
+
+  #big_image_cupy = cupy.asarray(big_image)
+  #num_classes = len(id_map)
+  image, annotation, annotation_truth = preprocessEucledian(big_image, id_map)
+
+  if ( training):
+     image, annotation = Augment(image, annotation)
+     annotation = K.cast(annotation, dtype='int32')
+  #image = tf.convert_to_tensor(cupy.asnumpy(image), dtype=tf.float32)
+  #annotation = tf.convert_to_tensor(cupy.asnumpy(annotation), dtype=tf.int32)
+
+  image, annotation, sample_weights = add_sample_weights(image, annotation)
+  return image, annotation#, sample_weights#, annotation_truth #<- need for plot only!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+
+
 
 from tensorflow.keras.utils import load_img, img_to_array
-
-
-
-import cupy #/10 the time with cupy 
-def preprocessEucledian(path, id_map):
-    #x = time.time()
-    img = img_to_array(load_img(path, target_size=(256, 512)))
-    data_image = img[:, :256, :] / 255.0
-    data_mask = img[:, 256:, :]
-    data_mask = cupy.asarray(data_mask, dtype=cupy.int32)
-    class_rgb = cupy.zeros((len(id_map), 3), dtype=cupy.int32)
-    for i, info in id_map.items():
-        class_rgb[i] = cupy.array([info[1], info[2], info[3]])
-
-    num_classes = len(id_map)
-    # Convert the mask to categorical format
-    mask = cupy.zeros((*data_mask.shape[:2], num_classes), dtype=cupy.uint8)
-
-    mask = cupy.linalg.norm(data_mask[:,:, None] - class_rgb, axis=-1)
-    mask = cupy.argmin(mask, axis = -1)
-
-    #plt.imshow(cupy.asnumpy(mask[:,:]).astype("uint8"))
-    #plt.show()
-    #print(time.time() - x)
-    return data_image, mask
-
-
-def prepare_tensor_dataset(train_path, val_path, id_map):
-    X_train = []
-    Y_train = []
-    X_val = []
-    Y_val = []
-    #class_rgb = cupy.asarray(class_rgb)
-
-    for file in tqdm(os.listdir(train_path)):
-        img, mask = preprocessEucledian(f"{train_path}/{file}", id_map)
-        X_train.append(img)
-        Y_train.append(mask)
-    
-    for file in tqdm(os.listdir(val_path)):
-        img, mask = preprocessEucledian(f"{val_path}/{file}", id_map)
-        X_val.append(img)
-        Y_val.append(mask)
-
-    return X_train, Y_train, X_val, Y_val
-
-
-from tensorflow.keras.utils import to_categorical
+numeric_values = []
 id_map = decalreIdmap()
-# start = time.time()
-# X_train, Y_train, X_valid, Y_valid = prepare_tensor_dataset("/media/gkasap/ssd256gb/datasets/cityscapes_data/train",
-#                                                              "/media/gkasap/ssd256gb/datasets/cityscapes_data/val", id_map)
-# print(f"Time taken: {time.time() - start}")
+#################################
+###########load data#############
+#################################
+H = W = 256
+batch_size = 4
+seed_number = 123
+pathData = "/media/gkasap/ssd256gb/datasets/cityscapes_data"
+train_ds = tf.keras.utils.image_dataset_from_directory(
+  pathData+"/trainDir",
+  validation_split=0.05,
+  subset="training",
+  seed=seed_number,
+  image_size=(H, W*2),
+  batch_size=batch_size)
 
-# cupy_arrays = [Y_train, Y_valid]
-# numpy_arrays = []
-
-# for cupy_array in cupy_arrays:
-#     numpy_everythink = []
-#     for cupy_everything in cupy_array:
-#         numpy_everythink.append(cupy_everything.get())
-#     numpy_arrays.append(numpy_everythink)
-
-
-# Store the arrays in a dictionary
-# data = {"x_train": X_train, "y_train": numpy_arrays[0], "x_valid": X_valid, "y_valid": numpy_arrays[1]}
-the_path = r"/home/gkasap/Documents/Python/projects/DLfullProject/cityscapes/my_data.pkl"
-# Save the dictionary as a .pkl file
-# with open(the_path, "wb") as f:
-#     pickle.dump(data, f)
-
-# Load the dictionary from the .pkl file
-with open(the_path, "rb") as f:
-    loaded_data = pickle.load(f)
-
-X_train =  np.array(loaded_data["x_train"], dtype="float32")
-Y_train = np.array(loaded_data["y_train"], dtype="int32")
-X_valid = np.array(loaded_data["x_valid"], dtype="float32")
-Y_valid = np.array(loaded_data["y_valid"], dtype="int32")
-##plt.imshow(Y_train[0].astype("uint8"))
+val_ds = tf.keras.utils.image_dataset_from_directory(
+  pathData+"/valDir",
+  validation_split=0.95,
+  subset="validation",
+  seed=seed_number,
+  image_size=(H, W*2),
+  batch_size=batch_size)
 
 
-# Calculate the crop indices
 
-# start_row = (X_train.shape[1] - 128) // 2
-# start_col = (X_train.shape[2] - 128) // 2
-# end_row = start_row + 128
-# end_col = start_col + 128
+set_numeric_values(numeric_values, id_map)
+numeric_values = np.reshape(numeric_values, (len(id_map), 3))
+numeric_values = tf.convert_to_tensor(numeric_values, dtype=tf.float32)
+#training_dataset = train_ds.map(read_image_and_annotation)
+#validation_dataset = val_ds.map(read_image_and_annotation)
+#x = training_dataset.map(Augment)
+AUTOTUNE = tf.data.AUTOTUNE
+BUFFER_SIZE = 1000
+#printImages2(x, 10 , 4)
+#training_dataset = training_dataset.cache().shuffle(1000).prefetch(buffer_size=AUTOTUNE)
+#validation_dataset = validation_dataset.cache().prefetch(buffer_size=AUTOTUNE)
+training_dataset = (
+    train_ds
+    .cache()
+    .shuffle(BUFFER_SIZE)
+    .repeat()
+    .map(lambda x, y: read_image_and_annotation(x, y, training=True))
+    .prefetch(buffer_size=tf.data.AUTOTUNE))
 
-# # Crop the input array
-# X_train = X_train[:,start_row:end_row, start_col:end_col,3]
-X_train = X_train[:700, :, :, :]
-Y_train = Y_train[:700, :, :]
-X_valid = X_valid[:200, :, :, :]
-Y_valid = Y_valid[:200, :, :]
+validation_dataset = (
+    val_ds
+    .cache()
+    .shuffle(BUFFER_SIZE)
+    .repeat()
+    .map(read_image_and_annotation)
+    .prefetch(buffer_size=tf.data.AUTOTUNE))
 
-print("X train shape is:", X_train.shape)
-print("Y train shape is:", Y_train.shape)
-print("X valid shape is:", X_valid.shape)
-print("Y valid shape is:", Y_valid.shape)
+
+# With this option, your preprocessing will happen on CPU, asynchronously, and will be buffered before going into the model. 
+# In addition, if you call dataset.prefetch(tf.data.AUTOTUNE) on your dataset, the preprocessing will happen efficiently in parallel with training:
+#https://www.tensorflow.org/guide/keras/preprocessing_layers
+
+
+
+
+# printImages2(training_dataset, 1 , 4)
+
+########################
+######weighting#########
+
+
+
+
+
+
 ######################
 #######create NN######
 ######################
-
+#printImages()
 channels = 3
 num_classes = len(id_map)
 # y_train = keras.utils.to_categorical(Y_train, num_classes)
 # y_valid = keras.utils.to_categorical(Y_valid, num_classes)
-
-input_size = (X_train.shape[1], X_train.shape[2], channels)
+W = H = 256
+input_size = (H, W, channels)
 def conv2d_block(input_tensor, n_filters, kernel_size=3):
   """
   Adds convolutional layers with the parameters passed to it.
@@ -190,6 +303,29 @@ def conv2d_block(input_tensor, n_filters, kernel_size=3):
     x = tf.keras.layers.Activation("relu")(x)
 
   return x
+
+def conv2d_block_bottle(input_tensor, n_filters, kernel_size=3):
+  """
+  Adds convolutional layers with the parameters passed to it.
+
+  Args:
+    input_tensor (tensor) -- the input tenor
+    n_filters (int) -- number of filters
+    kernel_size (int) -- kernel size of the convolution
+  """
+  # first layer 
+  x = input_tensor
+  for i in range(2):
+    x = tf.keras.layers.Conv2D(filters=n_filters, kernel_size=(kernel_size, kernel_size),
+                               kernel_initializer="he_normal", padding="same")(x)
+    x = tf.keras.layers.BatchNormalization()(x)
+    x = tf.keras.layers.Activation("relu")(x)
+
+  return x
+
+
+
+
 def encoder_block(inputs, n_filters=64, pool_size=(2,2), dropout=0.3):
   """
   Adds two convolutional blocks and then perform sampling on output of convolution.
@@ -234,7 +370,7 @@ def bottleneck(inputs):
   This function defines the bottleneck convolutions to extract more features before the unsampling layers.
   """
 
-  bottle_neck = conv2d_block(inputs, n_filters=1024)
+  bottle_neck = conv2d_block_bottle(inputs, n_filters=1024)
 
   return bottle_neck
 
@@ -288,12 +424,13 @@ def decoder(inputs, convs, output_channels):
   c9 = decoder_block(c8, conv_output=f1, n_filters=64, kernel_size=(3,3),
                      strides=(2,2), dropout=0.3)
   
-  outputs = tf.keras.layers.Conv2D(output_channels, (1,1), activation="softmax")(c9)
-
+  outputs = tf.keras.layers.Conv2D(output_channels, (1,1), activation="softmax",
+                                   bias_initializer = keras.initializers.Constant(-np.log(1/output_channels)))(c9)
+#
   return outputs
 
 
-OUTPUT_CHANNELS = 31
+OUTPUT_CHANNELS = 29
 
 def unet():
   """
@@ -301,7 +438,7 @@ def unet():
   """
 
   # specify the input shape
-  inputs = tf.keras.layers.Input(shape=(X_train.shape[1], X_train.shape[2], 3))
+  inputs = tf.keras.layers.Input(shape=(H, W, 3))
 
   # feed the inputs to the encoder
   encoder_output, convs = encoder(inputs)
@@ -320,44 +457,257 @@ def unet():
 
 # instantiate the model
 model = unet()
-print(model.summary())
+# print(model.summary())
 
 
-EPOCHS = 10
-model.compile(optimizer=Adam(lr=1e-3), loss='sparse_categorical_crossentropy', metrics=['accuracy'])
-#print(model.summary())
-BATCH_SIZE = 8
+NameoftheSimulation = "my_model_noAug_AccuracyDiceNvidia_v5d"
+############################################################################################################
+###################### set up call backs####################################################################
+############################################################################################################
+early_stopping = tf.keras.callbacks.EarlyStopping(
+    monitor='val_loss', 
+    verbose=1,
+    patience=30,
+    mode='max',
+    restore_best_weights=True)
+
+from datetime import datetime
+csv_logger = tf.keras.callbacks.CSVLogger("/home/gkasap/Documents/Python/projects/DLfullProject/logs"+ "training"+NameoftheSimulation+".log")
+
+logdir="logs/fit/" + datetime.now().strftime("%Y%m%d-%H%M%S") + NameoftheSimulation
+
+tensorboard_callback = keras.callbacks.TensorBoard(log_dir=logdir)
+
+model_checkpoint = tf.keras.callbacks.ModelCheckpoint(
+    filepath='/home/gkasap/Documents/Python/projects/DLfullProject/' + NameoftheSimulation +'h5',
+    monitor='val_loss',
+    save_best_only=True,
+    verbose=1
+    )
+# Saves the current weights after every epoch
+CALLBACKS = [early_stopping, csv_logger, tensorboard_callback, model_checkpoint]
+############################################################################################################
+########################## metrics ########################################################################
+
+def dice_coef(y_true, y_pred):
+  smooth=1.0
+  y_pred = (K.argmax(y_pred, -1))
+  y_true_f = K.flatten(y_true)
+  y_pred_f = K.flatten(y_pred)
+  y_true_f = K.cast(y_true_f, dtype='float32')
+  y_pred_f = K.cast(y_pred_f, dtype='float32')
+  intersection = K.sum(y_true_f * y_pred_f)
+  dice = (2. * intersection + smooth) / (K.sum(y_true_f) + K.sum(y_pred_f) + smooth)
+
+  return dice
+#NVIDIA
+def dice_coef_NVIDIA(y_true, y_pred, smooth=1):
+    indices = K.argmax(y_pred, -1)
+    indices = K.reshape(indices, [-1, 256, 256, 1])
+
+    indices_cast = K.cast(indices, dtype='float32')
+    true_cast = K.expand_dims(y_true, axis=-1)
+    true_cast = K.cast(true_cast, dtype='float32')
+    
+
+    axis = [1, 2, 3]
+    intersection = K.sum(true_cast * indices_cast, axis=axis)
+    union = K.sum(true_cast, axis=axis) + K.sum(indices_cast, axis=axis)
+    dice = K.mean((2. * intersection + smooth)/(union + smooth), axis=0)
+
+    return dice
+
+from tensorflow.compat.v1.keras import backend as Klarino
+
+# Define a function that takes a session object as an argument
+
+def compute_tensor(x):
+    # Convert the tensor to a NumPy array using the session object
+    print(x)
+
+   
+   
+
+def dice_coef_NVIDIA_multiClass(y_true, y_pred, num_classes =29, smooth=1.0):
+    #print(y_true.shape)
+    #print(y_pred.shape)#None 256x256x30
+
+    y_true = K.cast(y_true, dtype='int32') #None 256x256
+    y_pred = K.argmax(y_pred, axis=-1)#None 256x256
+    y_pred = K.expand_dims(y_pred, axis=-1) 
+    #print(y_true.shape)
+    #print(y_pred.shape)#None 256x256x30
+    y_true = K.cast(K.one_hot(y_true, num_classes), "int32")#None 256x256x31
+    y_pred = K.cast(K.one_hot(y_pred, num_classes), "int32")#None 256x256x31
+    y_true = tf.squeeze(y_true, axis=-2)
+    y_pred = tf.squeeze(y_pred, axis=-2)
+    #y_pred = K.flatten(y_pred)
+    axis = [1, 2]
+    intersection = K.cast(K.sum(y_true * y_pred, axis = axis), "float32")
+    #print(intersection.shape)
+    print(intersection)
+    #union = K.cast(K.sum(y_true + y_pred, axis = axis), "float32")
+    y_true = K.cast(y_true, dtype='float32')
+    y_pred = K.cast(y_pred, dtype='float32')
+    lol = class_wise_metrics(y_true, y_pred)
+
+    print(compute_tensor(lol ))
+    union = K.sum(y_true, axis=axis) + K.sum(y_pred, axis=axis)
+    #print(type(smooth))
+    dice = K.mean((2. * intersection + smooth) / (union + smooth))#axis = 0)
+    return dice
+#2 kai 13, 0.9838
+
+def class_wise_metrics(y_true, y_pred):
+  '''
+  Computes the class-wise IOU and Dice Score.
+
+  Args:
+    y_true (tensor) - ground truth label maps
+    y_pred (tensor) - predicted label maps
+  '''
+  class_wise_iou = []
+  class_wise_dice_score = []
+  print(type(y_true))
+  smoothing_factor = 0.00001
+  for j in range(batch_size):
+    print(type(y_true[j]))
+    #print(y_pred.dtype)
+    y_true_final = y_true[j]
+    y_pred_final = y_pred[j]
+    for i in range(29):
+      #tf.reduce_sum(tf.cast(tf.math.equal(y_pred, 1), dtype=tf.float32))
+      intersection = K.sum(tf.cast(tf.math.equal(y_pred[j,...], i), dtype=tf.float32)) * tf.reduce_sum(tf.cast(tf.math.equal(y_true[j,...], i), dtype=tf.float32))
+      #K.sum((y_pred[j,...] == i) * (y_true[j,...] == i))
+      y_true_area = K.sum(tf.cast(tf.math.equal(y_true[j,...], i), dtype=tf.float32))
+     # K.sum((y_true[j,...] == i))
+      y_pred_area = K.sum(tf.cast(tf.math.equal(y_pred[j,...], i), dtype=tf.float32))
+      #K.sum((y_pred[j,...] == i))
+      combined_area = y_true_area + y_pred_area
+      
+      iou = (intersection) / (combined_area - intersection + smoothing_factor)
+      class_wise_iou.append(iou)
+      
+      dice_score =  2 * ((intersection) / (combined_area + smoothing_factor))
+      class_wise_dice_score.append(dice_score)
+  print(tf.reduce_mean(class_wise_dice_score)+ tf.constant(1.0))
+  print(K.mean(class_wise_dice_score))
+  return K.mean(class_wise_dice_score[0])#, K.mean(class_wise_dice_score)
+#expand_dims
+#IoU = TP / (TP + FP + FN)
+def mean_iou(y_true, y_pred, num_classes = 29, smooth=1.0):
+    #print(y_true.shape)
+    #print(y_pred.shape)#None 256x256x31
+    y_true = K.cast(y_true, dtype='int32') #None 256x256
+    y_pred = K.argmax(y_pred, axis=-1)#None 256x256
+    y_pred = K.expand_dims(y_pred, axis=-1) 
+    y_true = K.cast(K.one_hot(y_true, num_classes), "int32")#None 256x256x31
+    y_pred = K.cast(K.one_hot(y_pred, num_classes), "int32")#None 256x256x31
+    y_true = tf.squeeze(y_true, axis=-2)
+    y_pred = tf.squeeze(y_pred, axis=-2)
+    #y_pred = K.flatten(y_pred)
+    axis = [1, 2]
+    intersection = K.cast(K.sum(y_true * y_pred, axis = axis), "float32")
+    #print(intersection.shape)
+    print(intersection)
+    #union = K.cast(K.sum(y_true + y_pred, axis = axis), "float32")
+    y_true = K.cast(y_true, dtype='float32')
+    y_pred = K.cast(y_pred, dtype='float32')
+    union = K.sum(y_true, axis=axis) + K.sum(y_pred, axis=axis)
+    #print(type(smooth))
+    mean_iou = K.mean((intersection + smooth) / (union - intersection + smooth))#axis = 0)
+
+    return mean_iou
+
+def dsc(y_true, y_pred):
+     smooth = 1.
+     y_true = K.cast(y_true, dtype='int32')
+     y_true = tf.squeeze(K.one_hot(y_true, 29),axis = -2)#None 256x256x29
+     y_true_f = K.cast(y_true, dtype='float32')
+     y_pred_f = K.cast(y_pred, dtype='float32')
+     axis = [1, 2]
+     print(y_true_f.shape)# one hot
+     print(y_pred_f.shape)#probabilities
+     intersection = K.sum(y_true_f * y_pred_f, axis = axis)#, axis = -1)
+     print(intersection.shape)
+     #print("kek")
+     #print(K.sum(y_true_f, axis=axis).shape)
+     #print(K.sum(tf.math.reduce_max(y_pred_f, axis = -1) + smooth, axis=axis))
+     score = (2. * intersection + smooth) / (K.sum(y_true_f, axis=axis) + K.sum(y_pred_f + smooth, axis=axis))
+     score = tf.math.reduce_max(score, axis = -1)
+     return  tf.math.reduce_mean(score)
+
+def dice_loss(y_true, y_pred):
+    return (1 - dsc(y_true, y_pred))
 
 
 
+
+EPOCHS = 25
+OPTIMIZER = SGD(lr=0.01, momentum=0.9, decay=0.0005, nesterov=True)
+model.compile(optimizer=OPTIMIZER, loss=tf.keras.losses.SparseCategoricalCrossentropy(),
+              metrics=[mean_iou, dice_coef_NVIDIA_multiClass, 'accuracy'])
+
+   # sample_weight_mode="temporal"
+
+# model.compile(optimizer=Adam(lr=1e-3), loss=dice_loss,
+#                metrics=[dice_coef_NVIDIA_multiClass, mean_iou, 'accuracy'])
+
+# #print(model.summary())
+# BATCH_SIZE = 8
+# print(y_pred_f.dtype, y_true_f.dtype)
+# 0.8
+steps_per_epoch = 2678//batch_size
+validation_steps = 400//batch_size
+
+
+sample_weights = tf.constant([8.07258824e-02, 3.94096823e-03, 1.60259805e-02, 3.25466704e-01,
+                        5.19174835e-02, 5.75354825e-03, 2.30739049e-03, 2.04011979e-01,
+                        1.13496719e-02, 8.01914760e-03, 1.96446523e-03, 5.54203835e-03,
+                        7.24404215e-03, 6.50931735e-03, 1.60708131e-03, 3.80645496e-03,
+                        1.35854395e-01, 9.24071240e-03, 3.18496678e-02, 9.98223826e-03,
+                        6.80947184e-04, 5.26883114e-02, 4.68826422e-03, 2.85823021e-03,
+                        2.04948361e-03, 6.29398122e-03, 2.02723912e-03, 6.61323611e-04,
+                        4.93305110e-03])*100
+sample_weights_pass = {i: sample_weights[i] for i in range(len(sample_weights))}
+
+print(training_dataset.element_spec)
 history = model.fit(
-    X_train, Y_train, 
+    training_dataset, 
     epochs=EPOCHS, 
-    batch_size=BATCH_SIZE, 
-    verbose=1, 
-    shuffle=True,
-    validation_data=(X_valid, Y_valid)
+    steps_per_epoch=steps_per_epoch,
+    verbose=1, shuffle=True,
+    callbacks = CALLBACKS,
+    validation_data=validation_dataset,
+    validation_steps=validation_steps
 )
-model.save('my_model.h5')
+model.save(NameoftheSimulation+'.h5')
 
 #Y_pred = model.predict(X_valid)
 
 # print some example predictions
 
 
-#print("correct shape from linux 500*256*256*3 = 98304000 from python:", len(Y_valid)*len(Y_valid[0])*len(Y_valid[0][0])*len(Y_valid[0][0][0]))
-#Y_train_one_hot = to_categorical(Y_train, num_classes)
-#Y_valid_one_hot = to_categorical(Y_valid, num_classes)
-#mask[..., np.argmin(np.abs(data_mask[0,0, None]-class_rgb), axis=-1)]
-#mask[..., np.argmin(np.amin(class_diff[..., None], axis=-1))] = 1
-#plt.imshow((255*mask[:,:,22]).astype("uint8"))
+##################################
+### test bench for custom metrics
+##################################
+# smooth=1.0
+# for x,y_true in training_dataset.take(1).repeat():
+#     for x,y_pred in validation_dataset.take(1).repeat():       
+#         y_true_f = K.flatten(y_true)
+#         y_pred_f = K.flatten(y_pred)
+#         y_true_f = K.cast(y_true_f, dtype='float32')
+#         y_pred_f = K.cast(y_pred_f, dtype='float32')
+#         intersection = K.sum(y_true_f * y_pred_f)
+#         dice = (2. * intersection + smooth) / (K.sum(y_true_f) + K.sum(y_pred_f) + smooth)
+#         print(dice)
+       
+#         break
+#     break
 
-#np.linalg.norm(data_mask[0,0, None] - class_rgb, axis=-1) auto einai sosto
-#np.linalg.norm(data_mask[:,:, None] - class_rgb, axis=-1).shape
-#np.argmin(np.amin(class_diff[0,0], axis = -1))
-#unique_values = np.amin(class_diff, axis = -1)
-#mask[...,np.amin(unique_values, axis = -1)] = 1
-#unique_values[np.argmax(value_counts)]
+
+#tf.math.reduce_max
 
 
-
+#y_pred = tf.random.uniform((2, 4, 4, 29))
+#y_true = K.cast(tf.argmax(y_pred, axis=-1), dtype='float32')
