@@ -183,7 +183,6 @@ def read_image_and_annotation(big_image, masks, training=False):
   Returns:
     preprocessed image-annotation pair
   '''
-  #print("hello")
 
   #big_image_cupy = cupy.asarray(big_image)
   #num_classes = len(id_map)
@@ -489,44 +488,8 @@ CALLBACKS = [early_stopping, csv_logger, tensorboard_callback, model_checkpoint]
 ############################################################################################################
 ########################## metrics ########################################################################
 
-def dice_coef(y_true, y_pred):
-  smooth=1.0
-  y_pred = (K.argmax(y_pred, -1))
-  y_true_f = K.flatten(y_true)
-  y_pred_f = K.flatten(y_pred)
-  y_true_f = K.cast(y_true_f, dtype='float32')
-  y_pred_f = K.cast(y_pred_f, dtype='float32')
-  intersection = K.sum(y_true_f * y_pred_f)
-  dice = (2. * intersection + smooth) / (K.sum(y_true_f) + K.sum(y_pred_f) + smooth)
 
-  return dice
-#NVIDIA
-def dice_coef_NVIDIA(y_true, y_pred, smooth=1):
-    indices = K.argmax(y_pred, -1)
-    indices = K.reshape(indices, [-1, 256, 256, 1])
 
-    indices_cast = K.cast(indices, dtype='float32')
-    true_cast = K.expand_dims(y_true, axis=-1)
-    true_cast = K.cast(true_cast, dtype='float32')
-    
-
-    axis = [1, 2, 3]
-    intersection = K.sum(true_cast * indices_cast, axis=axis)
-    union = K.sum(true_cast, axis=axis) + K.sum(indices_cast, axis=axis)
-    dice = K.mean((2. * intersection + smooth)/(union + smooth), axis=0)
-
-    return dice
-
-from tensorflow.compat.v1.keras import backend as Klarino
-
-# Define a function that takes a session object as an argument
-
-def compute_tensor(x):
-    # Convert the tensor to a NumPy array using the session object
-    print(x)
-
-   
-   
 
 def dice_coef_NVIDIA_multiClass(y_true, y_pred, num_classes =29, smooth=1.0):
     #print(y_true.shape)
@@ -549,14 +512,11 @@ def dice_coef_NVIDIA_multiClass(y_true, y_pred, num_classes =29, smooth=1.0):
     #union = K.cast(K.sum(y_true + y_pred, axis = axis), "float32")
     y_true = K.cast(y_true, dtype='float32')
     y_pred = K.cast(y_pred, dtype='float32')
-    lol = class_wise_metrics(y_true, y_pred)
 
-    print(compute_tensor(lol ))
     union = K.sum(y_true, axis=axis) + K.sum(y_pred, axis=axis)
-    #print(type(smooth))
     dice = K.mean((2. * intersection + smooth) / (union + smooth))#axis = 0)
     return dice
-#2 kai 13, 0.9838
+
 
 def class_wise_metrics(y_true, y_pred):
   '''
