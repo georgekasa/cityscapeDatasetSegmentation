@@ -37,3 +37,6 @@ possible solutions
 1)alter relu to leaky relu
 2)more options for augmentation
 
+if someone is reading that check the video
+
+
