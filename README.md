@@ -22,6 +22,7 @@ in the masks they are many many pixels which their values could be e.g. (0,0,2) 
 2) weights in classes
 
 #update 20230501 
+
 1)added dice loss, must check it
  
 [1]https://github.com/mcordts/cityscapesScripts
