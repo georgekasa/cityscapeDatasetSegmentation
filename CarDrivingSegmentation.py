@@ -15,6 +15,7 @@ from keras.optimizers import *
 from keras.callbacks import ModelCheckpoint
 from tensorflow import keras
 from tensorflow.keras import backend as K
+from tensorflow.keras.callbacks import Callback
 
 
 def decalreIdmap():
@@ -54,7 +55,6 @@ def decalreIdmap():
     #df.index.name = 'name'
     df.reset_index(inplace=True)
     df.rename(columns={'index': 'id_name'}, inplace=True)
-    print(df)
     return id_map
 
 #inferno, plasma, magma, viridis
@@ -90,7 +90,6 @@ def printImages2(dataset, index_of_dataset , numberofImages):
   x = dataset.take(index_of_dataset)
   for image, labels in x:
       fig, axs = plt.subplots(numberofImages, 2, figsize=(16, 16))
-      print(labels.shape)
       for i in range(numberofImages):
           # Convert the tensor to a NumPy array
           image_array = (255*image[i]).numpy().astype("uint8")
@@ -183,6 +182,7 @@ def read_image_and_annotation(big_image, masks, training=False):
   Returns:
     preprocessed image-annotation pair
   '''
+  #print("hello")
 
   #big_image_cupy = cupy.asarray(big_image)
   #num_classes = len(id_map)
@@ -261,18 +261,7 @@ validation_dataset = (
 # With this option, your preprocessing will happen on CPU, asynchronously, and will be buffered before going into the model. 
 # In addition, if you call dataset.prefetch(tf.data.AUTOTUNE) on your dataset, the preprocessing will happen efficiently in parallel with training:
 #https://www.tensorflow.org/guide/keras/preprocessing_layers
-
-
-
-
 # printImages2(training_dataset, 1 , 4)
-
-########################
-######weighting#########
-
-
-
-
 
 
 ######################
@@ -463,6 +452,16 @@ NameoftheSimulation = "my_model_noAug_AccuracyDiceNvidia_v5d"
 ############################################################################################################
 ###################### set up call backs####################################################################
 ############################################################################################################
+
+from tensorflow.keras.callbacks import LearningRateScheduler
+
+def lr_scheduler(epoch, lr):
+    if epoch < 10:
+        return lr
+    else:
+        return 0.0001
+lr_schedule = LearningRateScheduler(lr_scheduler, verbose=1)
+
 early_stopping = tf.keras.callbacks.EarlyStopping(
     monitor='val_loss', 
     verbose=1,
@@ -484,22 +483,19 @@ model_checkpoint = tf.keras.callbacks.ModelCheckpoint(
     verbose=1
     )
 # Saves the current weights after every epoch
-CALLBACKS = [early_stopping, csv_logger, tensorboard_callback, model_checkpoint]
+CALLBACKS = [early_stopping, csv_logger, tensorboard_callback, model_checkpoint, lr_schedule]
 ############################################################################################################
 ########################## metrics ########################################################################
 
 
 
 
-def dice_coef_NVIDIA_multiClass(y_true, y_pred, num_classes =29, smooth=1.0):
-    #print(y_true.shape)
-    #print(y_pred.shape)#None 256x256x30
 
+def dice_coef_NVIDIA_multiClass(y_true, y_pred, num_classes =29, smooth=1.0):
     y_true = K.cast(y_true, dtype='int32') #None 256x256
     y_pred = K.argmax(y_pred, axis=-1)#None 256x256
     y_pred = K.expand_dims(y_pred, axis=-1) 
-    #print(y_true.shape)
-    #print(y_pred.shape)#None 256x256x30
+
     y_true = K.cast(K.one_hot(y_true, num_classes), "int32")#None 256x256x31
     y_pred = K.cast(K.one_hot(y_pred, num_classes), "int32")#None 256x256x31
     y_true = tf.squeeze(y_true, axis=-2)
@@ -507,57 +503,17 @@ def dice_coef_NVIDIA_multiClass(y_true, y_pred, num_classes =29, smooth=1.0):
     #y_pred = K.flatten(y_pred)
     axis = [1, 2]
     intersection = K.cast(K.sum(y_true * y_pred, axis = axis), "float32")
-    #print(intersection.shape)
-    print(intersection)
     #union = K.cast(K.sum(y_true + y_pred, axis = axis), "float32")
     y_true = K.cast(y_true, dtype='float32')
     y_pred = K.cast(y_pred, dtype='float32')
-
     union = K.sum(y_true, axis=axis) + K.sum(y_pred, axis=axis)
     dice = K.mean((2. * intersection + smooth) / (union + smooth))#axis = 0)
     return dice
+#2 kai 13, 0.9838
 
 
-def class_wise_metrics(y_true, y_pred):
-  '''
-  Computes the class-wise IOU and Dice Score.
-
-  Args:
-    y_true (tensor) - ground truth label maps
-    y_pred (tensor) - predicted label maps
-  '''
-  class_wise_iou = []
-  class_wise_dice_score = []
-  print(type(y_true))
-  smoothing_factor = 0.00001
-  for j in range(batch_size):
-    print(type(y_true[j]))
-    #print(y_pred.dtype)
-    y_true_final = y_true[j]
-    y_pred_final = y_pred[j]
-    for i in range(29):
-      #tf.reduce_sum(tf.cast(tf.math.equal(y_pred, 1), dtype=tf.float32))
-      intersection = K.sum(tf.cast(tf.math.equal(y_pred[j,...], i), dtype=tf.float32)) * tf.reduce_sum(tf.cast(tf.math.equal(y_true[j,...], i), dtype=tf.float32))
-      #K.sum((y_pred[j,...] == i) * (y_true[j,...] == i))
-      y_true_area = K.sum(tf.cast(tf.math.equal(y_true[j,...], i), dtype=tf.float32))
-     # K.sum((y_true[j,...] == i))
-      y_pred_area = K.sum(tf.cast(tf.math.equal(y_pred[j,...], i), dtype=tf.float32))
-      #K.sum((y_pred[j,...] == i))
-      combined_area = y_true_area + y_pred_area
-      
-      iou = (intersection) / (combined_area - intersection + smoothing_factor)
-      class_wise_iou.append(iou)
-      
-      dice_score =  2 * ((intersection) / (combined_area + smoothing_factor))
-      class_wise_dice_score.append(dice_score)
-  print(tf.reduce_mean(class_wise_dice_score)+ tf.constant(1.0))
-  print(K.mean(class_wise_dice_score))
-  return K.mean(class_wise_dice_score[0])#, K.mean(class_wise_dice_score)
-#expand_dims
 #IoU = TP / (TP + FP + FN)
 def mean_iou(y_true, y_pred, num_classes = 29, smooth=1.0):
-    #print(y_true.shape)
-    #print(y_pred.shape)#None 256x256x31
     y_true = K.cast(y_true, dtype='int32') #None 256x256
     y_pred = K.argmax(y_pred, axis=-1)#None 256x256
     y_pred = K.expand_dims(y_pred, axis=-1) 
@@ -568,44 +524,55 @@ def mean_iou(y_true, y_pred, num_classes = 29, smooth=1.0):
     #y_pred = K.flatten(y_pred)
     axis = [1, 2]
     intersection = K.cast(K.sum(y_true * y_pred, axis = axis), "float32")
-    #print(intersection.shape)
-    print(intersection)
     #union = K.cast(K.sum(y_true + y_pred, axis = axis), "float32")
     y_true = K.cast(y_true, dtype='float32')
     y_pred = K.cast(y_pred, dtype='float32')
     union = K.sum(y_true, axis=axis) + K.sum(y_pred, axis=axis)
-    #print(type(smooth))
     mean_iou = K.mean((intersection + smooth) / (union - intersection + smooth))#axis = 0)
 
     return mean_iou
 
 def dsc(y_true, y_pred):
      smooth = 1.
+     print("started")
      y_true = K.cast(y_true, dtype='int32')
      y_true = tf.squeeze(K.one_hot(y_true, 29),axis = -2)#None 256x256x29
      y_true_f = K.cast(y_true, dtype='float32')
-     y_pred_f = K.cast(y_pred, dtype='float32')
+     y_pred_f = K.cast(y_pred, dtype='float32')#None 256x256x29
      axis = [1, 2]
-     print(y_true_f.shape)# one hot
-     print(y_pred_f.shape)#probabilities
-     intersection = K.sum(y_true_f * y_pred_f, axis = axis)#, axis = -1)
+     y_pred_f = relu_argmax(y_pred_f)
+     print("kek",y_pred_f.shape)#argmax
+     intersection = K.sum(y_true_f * y_pred_f, axis =axis)#, axis = -1)
      print(intersection.shape)
-     #print("kek")
-     #print(K.sum(y_true_f, axis=axis).shape)
-     #print(K.sum(tf.math.reduce_max(y_pred_f, axis = -1) + smooth, axis=axis))
-     score = (2. * intersection + smooth) / (K.sum(y_true_f, axis=axis) + K.sum(y_pred_f + smooth, axis=axis))
-     score = tf.math.reduce_max(score, axis = -1)
+     score = (2. * intersection + smooth) / (K.sum(y_true_f, axis=axis) + K.sum(y_pred_f, axis=axis)+smooth)
+    # score = tf.math.reduce_max(score, axis = -1)
      return  tf.math.reduce_mean(score)
 
 def dice_loss(y_true, y_pred):
-    return (1 - dsc(y_true, y_pred))
+    dice_coef = dsc(y_true, y_pred)
+
+    return (1 - dice_coef)#-10.0*tf.math.log(1 - dice_coef)
+
+
+
+def relu_argmax(y_pred):
+    max_val = tf.reduce_max(y_pred, axis=-1, keepdims=True)
+    print(max_val.shape)
+    y_pred_shifted = y_pred - max_val + 0.0001
+    y_pred_relu = tf.nn.relu(y_pred_shifted)
+    print(y_pred_relu.shape)
+    y_pred_onehot = y_pred_relu/tf.reduce_sum(y_pred_relu, axis=-1, keepdims=True)
+    #na valo sum afou to relu to exei kani 0 to neg 
+    return y_pred_onehot
+
 
 
 
 
 EPOCHS = 25
 OPTIMIZER = SGD(lr=0.01, momentum=0.9, decay=0.0005, nesterov=True)
-model.compile(optimizer=OPTIMIZER, loss=tf.keras.losses.SparseCategoricalCrossentropy(),
+#OPTIMIZER = Adam(lr=1e-3)
+model.compile(optimizer=OPTIMIZER, loss=['sparse_categorical_crossentropy'],#dice_loss
               metrics=[dice_coef_NVIDIA_multiClass, mean_iou, 'accuracy'])
 
    # sample_weight_mode="temporal"
@@ -615,10 +582,9 @@ model.compile(optimizer=OPTIMIZER, loss=tf.keras.losses.SparseCategoricalCrossen
 
 # #print(model.summary())
 # BATCH_SIZE = 8
-# print(y_pred_f.dtype, y_true_f.dtype)
 # 0.8
-steps_per_epoch = 2678//batch_size
-validation_steps = 400//batch_size
+steps_per_epoch = 2975//batch_size
+validation_steps = 475//batch_size
 
 
 sample_weights = tf.constant([8.07258824e-02, 3.94096823e-03, 1.60259805e-02, 3.25466704e-01,
@@ -630,7 +596,10 @@ sample_weights = tf.constant([8.07258824e-02, 3.94096823e-03, 1.60259805e-02, 3.
                         2.04948361e-03, 6.29398122e-03, 2.02723912e-03, 6.61323611e-04,
                         4.93305110e-03])*100
 sample_weights_pass = {i: sample_weights[i] for i in range(len(sample_weights))}
+def add_sample_weights(images, labels):
+    return images, labels, tf.gather(sample_weights, labels)
 
+training_dataset_weighted = training_dataset.map(add_sample_weights)
 print(training_dataset.element_spec)
 history = model.fit(
     training_dataset, 
@@ -640,12 +609,12 @@ history = model.fit(
     callbacks = CALLBACKS,
     validation_data=validation_dataset,
     validation_steps=validation_steps
+    #sample_weight = sample_weights_pass
 )
 model.save(NameoftheSimulation+'.h5')
 
 #Y_pred = model.predict(X_valid)
 
-# print some example predictions
 
 
 ##################################
