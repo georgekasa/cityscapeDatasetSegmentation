@@ -15,7 +15,8 @@ in the masks they are many many pixels which their values could be e.g. (0,0,2) 
 4) Also I used the Unet, algorithm without using some tricks which Karpathy has suggested from CS231N, the code for the NN I did get it from the course which I finished in coursera AdvancedComputer vision with tf & keras
     https://github.com/georgekasa/courseraAdvancedComputerVisionTensorFlow- 
     
- 
+ if someone is reading that check the video
+
 #update 20230430
 
 1) added (simple) augmentation
@@ -37,6 +38,5 @@ possible solutions
 1)alter relu to leaky relu
 2)more options for augmentation
 
-if someone is reading that check the video
 
 
